@@ -3,9 +3,16 @@ import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { HttpParams } from '@angular/common/http';
 
+const DAY_IN_MILLISECONDS = 86400000;
+
 export interface Coordinates {
   latitude: number,
   longitude: number
+}
+
+export interface DateRange {
+  begin: Date,
+  end: Date,
 }
 
 @Injectable({
@@ -14,48 +21,179 @@ export interface Coordinates {
 
 export class NasaLibService {
   
-  private BASEURL: string = "https://api.nasa.gov/planetary/apod";
-  private PARAM_API_KEY: string = "api_key";
-  private QUERY_PARAM_DATE: string = "date";
-  private PARAM_HD: string = "hd";
+  private DEFAULT_API_DATE_FORMAT = "yyyy-MM-dd";
+
+  private BASEURL: string = "https://api.nasa.gov/planetary/earth/assets";
   
+  private QUERY_PARAM_API_KEY: string = "api_key"; // api.nasa.gov key for expanded usage
+  private QUERY_PARAM_LATITUDE: string = "lat";
+  private QUERY_PARAM_LONGITUDE: string = "lon";
+  private QUERY_PARAM_DATE_BEGIN: string = "begin"; // YYYY-MM-DD
+  private QUERY_PARAM_DATE_END: string = "end"; // YYYY-MM-DD
+  
+  // private QUERY_PARAM_DATE: string = "date"; nodig voor picture of the day
+  // private QUERY_PARAM_HD: string = "hd"; nodig voor picture of the day
+
   private apiKey: string = "NNKOjkoul8n1CH18TWA9gwngW1s1SmjESPjNoUFo";
   
   private coordinates: Coordinates;
+  private datePicture: Date;
+
+  private assetsBeginDate: Date;
+  private assetsEndDate: Date;
+
+  private maxTries: number = 5;
+  private incrementBy: number = 10;
+  private tries: number = 0;
+
+  private observers: Set<NasaServiceObserver> = new Set();
+
+  private dateFoundPicture: Date;
+  private foundPicture: NasaPicture;
+  
+  private fetching: boolean = false;
 
   constructor(private http: HttpClient, private datePipe: DatePipe) {
 
+  }
+
+  public updateDatePicture(date: Date){
+    this.datePicture = date;
   }
 
   public updateCoordinates(coordinates: Coordinates){
     this.coordinates = coordinates;
   }
 
-  public getCoordinates(){
+  public refreshPicture(): void {
+    this.getEarthPicture();
+  }
+
+  public getCoordinates(): Coordinates {
     return this.coordinates;
   }
-  
-  public getLatitude(){
-    return this.coordinates.latitude;
+
+  public getFoundPicture(): NasaPicture{
+    return this.foundPicture;
   }
 
-  public getLongitude(){
-    return this.coordinates.longitude;
-  }
-
-  getPictureOfTheDay(date: Date = new Date()) {
-    return this.http.get(this.BASEURL, {params: this.getParams(date,true)})
-      .toPromise()
-      .then(response => {
-        debugger;
-        return Promise.resolve(response);
-      });
+  public subscribe(observer: NasaServiceObserver){
+    if(!observer){
+      throw new Error("Invalid observer. Unable to subscribe. Observer must be instance of NasaServiceObserver");
+    }
+    this.observers.add(observer);
   }
   
-  private getParams(date: Date, hdPicture: boolean = false): HttpParams {
+  public unsubscribe(observer: NasaServiceObserver){
+    if(!observer){
+      throw new Error("Invalid observer. Unable to unsubscribe. Observer must be instance of NasaServiceObserver");
+    }
+    this.observers.delete(observer);
+  }
+
+  public isFetching(): boolean {
+    return this.fetching;
+  }
+
+  private findEarthPictureClosestToDate(): Promise{
+    if(){
+
+    }
+
+    this.http.get(this.BASEURL, {params: this.getParams()})
+        .toPromise();
+  }
+
+  // https://api.nasa.gov/api.html#earth
+  // https://api.nasa.gov/api.html#assets
+  private getEarthPicture() : void {
+    this.fetching = true;
+    if(!this.isDateValid()){
+      return this.updatePicture(this.createInputErrorNasaPicture("Invalid dateRange given. Make sure to have a valid begin and end date of which the begin is before the end date."));
+    }else if(!this.isCoordinatesValid()){
+      return this.updatePicture(this.createInputErrorNasaPicture("Invalid coordinates given. Make sure to have a valid latitude and longitude that are numbers."));
+    }else{
+      this.http.get(this.BASEURL, {params: this.getParams()})
+        .toPromise()
+        .then(response => {
+          // return Promise.resolve(this.createNasaPicture(null));
+          this.updatePicture(null);
+        })
+      return;  
+    }
+  }
+
+  private getParams(): HttpParams {
+    const daysDiff = this.getTotalDaysDifference(this.tries,this.incrementBy);
+    const dateStart = new Date().setTime(this.datePicture.getTime() - (daysDiff * DAY_IN_MILLISECONDS));
+    const dateEnd = new Date().setTime(this.datePicture.getTime() + (daysDiff * DAY_IN_MILLISECONDS));
+
     return new HttpParams()
-      .set(this.PARAM_API_KEY, this.apiKey)
-      .set(this.QUERY_PARAM_DATE, this.datePipe.transform(date, "yyyy-MM-dd"))
-      .set(this.PARAM_HD, hdPicture ? "True" : "False");
+      .set(this.QUERY_PARAM_API_KEY, this.apiKey)
+      .set(this.QUERY_PARAM_LATITUDE, this.getCoordinates().latitude.toString())
+      .set(this.QUERY_PARAM_LONGITUDE, this.getCoordinates().longitude.toString())
+      .set(this.QUERY_PARAM_DATE_BEGIN, this.datePipe.transform(dateStart, this.DEFAULT_API_DATE_FORMAT))
+      .set(this.QUERY_PARAM_DATE_END, this.datePipe.transform(dateEnd, this.DEFAULT_API_DATE_FORMAT))
   }
+
+  private isDateValid(): boolean{
+    return this.datePicture instanceof Date && this.datePicture.toString() !== 'Invalid Date';
+  }
+  
+  private updatePicture(nasaPicture: NasaPicture){
+    this.fetching = false;
+    this.foundPicture = nasaPicture;
+    this.observers.forEach(o => o.onPictureUpdate(this.foundPicture));
+  }
+
+  private isCoordinatesValid(){
+    if(!this.coordinates 
+      || typeof this.coordinates.latitude !== 'number' 
+      || typeof this.coordinates.longitude !== 'number'){
+      return false;
+    }
+    return true;
+  }
+
+  private createNotFoundNasaPicture(){
+    const maxDaysDifference =  this.getTotalDaysDifference(this.maxTries,this.incrementBy);
+    const picture = new NasaPicture();
+    picture.code = "404";
+    picture.info = "Unable to find any picture " + maxDaysDifference + " days before or after given date.";
+    return picture;
+  }
+
+  private createNasaPicture(response: any){
+    const picture = new NasaPicture();
+    picture.code = "200";
+    picture.info = "success";
+    return picture;
+  }
+  
+  private createInputErrorNasaPicture(reason: string): NasaPicture {
+    const picture = new NasaPicture();
+    picture.code = "400";
+    picture.info = reason;
+    return picture;
+  }
+
+  private getTotalDaysDifference(tries: number, factor: number) : number{
+    if(tries == 1){
+      return factor;
+    }
+    return ((tries + 1) * factor) + this.getTotalDaysDifference(tries - 1, factor);
+  }
+}
+
+export class NasaPicture {
+  code: string;
+  info: string;
+  date: Date;
+  url: string;
+}
+
+export interface NasaServiceObserver{
+
+  onPictureUpdate(picture: NasaPicture);
+
 }

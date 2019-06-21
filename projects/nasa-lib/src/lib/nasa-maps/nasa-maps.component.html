@@ -1,0 +1,8 @@
+<iframe
+    *ngIf="coordinates && coordinates.latitude && coordinates.longitude"
+    width="600" 
+    height="500" 
+    frameborder="0" 
+    scrolling="no" 
+    [src]="'https://maps.google.com/maps?q=' + coordinates.latitude + ',' + coordinates.longitude + '&hl=es;z=14&amp;output=embed'">
+</iframe>

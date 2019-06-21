@@ -1,15 +1,19 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
+import { NasaLibService, Coordinates } from '../nasa-service/nasa-lib.service';
 
 @Component({
   selector: 'nasa-maps',
   templateUrl: './nasa-maps.component.html',
   styles: []
 })
-export class NasaMapsComponent implements OnInit {
+export class NasaMapsComponent {
 
-  constructor() { }
+  constructor(
+    private nasaService: NasaLibService
+  ) { }
 
-  ngOnInit() {
+  get coordinates(): Coordinates {
+    return this.nasaService.getCoordinates();
   }
 
 }
