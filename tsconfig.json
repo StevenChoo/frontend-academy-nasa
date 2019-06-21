@@ -17,6 +17,14 @@
     "lib": [
       "es2018",
       "dom"
-    ]
+    ],
+    "paths": {
+      "nasa-lib": [
+        "dist/nasa-lib"
+      ],
+      "nasa-lib/*": [
+        "dist/nasa-lib/*"
+      ]
+    }
   }
 }
