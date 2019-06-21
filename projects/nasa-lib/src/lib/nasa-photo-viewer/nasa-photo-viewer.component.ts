@@ -35,18 +35,10 @@ export class NasaPhotoViewer implements OnInit, OnDestroy, NasaServiceObserver {
         }, 0)
       }
     })
-
-    console.warn(this.llalala(0));
   }
   
   ngOnDestroy() {
     this.nasaService.unsubscribe(this);
-  }
-
-  private llalala(amount: number) {
-    if (amount < 100) {
-      return this.llalala(amount+10);
-    }
   }
 
   onPictureUpdate(picture: NasaPicture) {
