@@ -47,7 +47,7 @@ export class NasaLibService {
     private dateFoundPicture: Date;
     private foundPicture: NasaPicture;
 
-    private fetching: boolean = false;
+    private states: object = {};
 
     constructor(private http: HttpClient, private datePipe: DatePipe) {
 
@@ -87,23 +87,20 @@ export class NasaLibService {
         this.observers.delete(observer);
     }
 
-    public isFetching(): boolean {
-        return this.fetching;
-    }
-
     // https://api.nasa.gov/api.html#earth
     // https://api.nasa.gov/api.html#assets
     public getEarthPicture(): void {
-        if(this.fetching === true){
+        if(this.states['loading'] === true){
             console.log("Already fetching.");
             return;
         }
-        this.fetching = true;
+        this.updateStatus("loading",true);
         if (!this.isDateValid()) {
             return this.updatePicture(this.createInputErrorNasaPicture("Invalid dateRange given. Make sure to have a valid begin and end date of which the begin is before the end date."));
         } else if (!this.isCoordinatesValid()) {
             return this.updatePicture(this.createInputErrorNasaPicture("Invalid coordinates given. Make sure to have a valid latitude and longitude that are numbers."));
         } else {
+            this.resetAttempts();
             return this.findEarthPicture(this.datePicture);
         }
     }
@@ -169,9 +166,14 @@ export class NasaLibService {
     }
 
     private updatePicture(nasaPicture: NasaPicture) {
-        this.fetching = false;
+        this.updateStatus("loading",false);
         this.foundPicture = nasaPicture;
         this.observers.forEach(o => o.onPictureUpdate(this.foundPicture));
+    }
+
+    private updateStatus(status: string, state: boolean){
+        this.states['status'] = state;
+        this.observers.forEach(o => o.onStatusUpdate(status, state));
     }
 
     private isCoordinatesValid() {
@@ -195,6 +197,7 @@ export class NasaLibService {
         const picture = new NasaPicture();
         picture.code = "200";
         picture.info = "success";
+        picture.picture = response;
         return picture;
     }
 
@@ -233,17 +236,21 @@ export class NasaLibService {
         });
         return datePicture;
     }
+
+    private resetAttempts(){
+        this.attempt = 0;
+    }
 }
 
 export class NasaPicture {
     code: string;
     info: string;
-    date: Date;
-    url: string;
+    picture: any;
 }
 
 export interface NasaServiceObserver {
 
     onPictureUpdate(picture: NasaPicture);
+    onStatusUpdate(status: string, state: boolean);
 
 }

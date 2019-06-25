@@ -1,17 +1,8 @@
-<img *ngIf="nasaPicture" [src]="nasaPicture.url" width="400px" height="500px" />
-<span *ngIf="nasaPicture">{{nasaPicture.info}}</span>
-
-<form class="nasa-form" [formGroup]="nasaForm">
-    <div class="field">
-        <span>Latitude:</span>
-        <input formControlName="latitude" type="number" [value]="latitude" required/>
-    </div>
-    <div class="field">
-        <span>Longitude:</span>
-        <input formControlName="longitude" type="number" [value]="longitude" required/>
-    </div>
-    <div class="field">
-        <span>Date:</span>
-        <input formControlName="date" type="date" [max]="maxDate | date:'dd-MM-yyy'" [value]="date | date:'yyy-dd-MM'" required/>
-    </div>
-</form>
+<div>
+	<div *ngIf="loading" class="loading">Loading...</div>
+	<div *ngIf="nasaPicture && nasaPicture.code === '200'" class="success">
+		<img [src]="nasaPicture.picture.url" width="400px" height="500px" />
+	</div>
+	<div *ngIf="nasaPicture && nasaPicture.code !== '200'" class="error">{{nasaPicture.info}}</div>
+	<div *ngIf="!nasaPicture && !loading">No picture selected</div>
+</div>
