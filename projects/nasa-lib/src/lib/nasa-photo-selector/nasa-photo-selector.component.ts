@@ -13,6 +13,9 @@ export class NasaPhotoSelector implements OnInit, OnDestroy, NasaServiceObserver
 
   ngOnInit() {
     this.nasaService.subscribe(this);
+    this.nasaService.updateCoordinates({latitude:51.900300,longitude:4.548440});
+    this.nasaService.updateDatePicture(new Date("2018-01-01"));
+    this.nasaService.refreshPicture();
   }
 
   ngOnDestroy() {

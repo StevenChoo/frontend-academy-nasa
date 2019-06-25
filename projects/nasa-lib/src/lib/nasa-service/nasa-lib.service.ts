@@ -32,7 +32,6 @@ export class NasaLibService {
     private QUERY_PARAM_DATE_END: string = "end"; // YYYY-MM-DD
 
     private QUERY_PARAM_DATE: string = "date"; // nodig voor picture of the day
-    private QUERY_PARAM_HD: string = "hd"; // nodig voor picture of the day
 
     private apiKey: string = "NNKOjkoul8n1CH18TWA9gwngW1s1SmjESPjNoUFo";
 
@@ -105,35 +104,33 @@ export class NasaLibService {
         } else if (!this.isCoordinatesValid()) {
             return this.updatePicture(this.createInputErrorNasaPicture("Invalid coordinates given. Make sure to have a valid latitude and longitude that are numbers."));
         } else {
-            return this.findEarthPicture();
+            return this.findEarthPicture(this.datePicture);
         }
     }
 
-    private findEarthPicture(){
+    private findEarthPicture(date: Date){
         this.attempt++;
-        this.findEarthPictureClosestToDate(this.attempt)
+        this.findEarthPictureClosestToDate(this.attempt,date)
             .then(picture => {
-                if(null == picture){
-                    debugger;
-                    this.findEarthPicture();
+                if(null == picture || picture.count === 0){
+                    return this.findEarthPicture(date);
                 }else {
-                    debugger;
-                    this.dateFoundPicture = null;
-                    this.getEarthPictureOfDate(this.dateFoundPicture, this.coordinates);
+                    const datePicture = this.findAssetClosestDate(picture.results,this.datePicture);
+                    this.dateFoundPicture = new Date(datePicture);
+                    return this.getEarthPictureOfDate(this.dateFoundPicture, this.coordinates);
                 }
             })
             .catch(error => {
-                debugger;
-                return Promise.reject("Unable to find a picture closes to date.")
+                return this.updatePicture(this.createNotFoundNasaPicture(date));
             });
     }
 
-    private findEarthPictureClosestToDate(attemp:number): Promise<any> {
-        debugger;
+    private findEarthPictureClosestToDate(attemp:number,date: Date): Promise<any> {
+        console.log('fetching. attempt: ' + attemp);
         if(attemp > this.maxTries){
             return Promise.reject("Unable to find a picture closes to date.")
         }
-        return this.http.get(this.BASEURL_ASSETS, {params: this.getParamsFindPicture(attemp,this.datePicture,this.coordinates)}).toPromise();
+        return this.http.get(this.BASEURL_ASSETS, {params: this.getParamsFindPicture(attemp,date,this.coordinates)}).toPromise();
     }
 
     private getParamsFindPicture(attempt: number, date: Date, coordinates: Coordinates): HttpParams {
@@ -153,10 +150,8 @@ export class NasaLibService {
         this.http.get(this.BASEURL_IMAGE, {params: this.getParamsGetPicture(coordinates.latitude, coordinates.longitude, date)})
             .toPromise()
             .then(response => {
-                debugger;
                 this.updatePicture(this.createNasaPicture(response));
             }).catch(error => {
-               debugger;
                this.updatePicture(this.createErrorNasaPicture(error));
             });
     }
@@ -188,11 +183,11 @@ export class NasaLibService {
         return true;
     }
 
-    private createNotFoundNasaPicture() {
+    private createNotFoundNasaPicture(date: Date) {
         const maxDaysDifference = this.getTotalDaysDifference(this.maxTries, this.incrementBy);
         const picture = new NasaPicture();
         picture.code = "404";
-        picture.info = "Unable to find any picture " + maxDaysDifference + " days before or after given date.";
+        picture.info = "Unable to find any picture " + maxDaysDifference + " days before or after given date: " + date;
         return picture;
     }
 
@@ -222,6 +217,21 @@ export class NasaLibService {
             return factor;
         }
         return ((tries + 1) * factor) + this.getTotalDaysDifference(tries - 1, factor);
+    }
+
+    private findAssetClosestDate(assets: any[], date: Date){
+        let timeDiff = null;
+        let datePicture = null;
+
+        assets.forEach(asset => {
+            const dateAsset = new Date(asset.date);
+            const assetTimeDiff = Math.abs(date.getTime() - dateAsset.getTime());
+            if(null === timeDiff || timeDiff > assetTimeDiff){
+                timeDiff = assetTimeDiff;
+                datePicture = asset.date;
+            }
+        });
+        return datePicture;
     }
 }
 
