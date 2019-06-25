@@ -114,22 +114,22 @@ export class NasaLibService {
         this.findEarthPictureClosestToDate(this.attempt)
             .then(picture => {
                 if(null == picture){
-                    debugger;
+                    
                     this.findEarthPicture();
                 }else {
-                    debugger;
+                    
                     this.dateFoundPicture = null;
                     this.getEarthPictureOfDate(this.dateFoundPicture, this.coordinates);
                 }
             })
             .catch(error => {
-                debugger;
+                
                 return Promise.reject("Unable to find a picture closes to date.")
             });
     }
 
     private findEarthPictureClosestToDate(attemp:number): Promise<any> {
-        debugger;
+        
         if(attemp > this.maxTries){
             return Promise.reject("Unable to find a picture closes to date.")
         }
@@ -153,10 +153,10 @@ export class NasaLibService {
         this.http.get(this.BASEURL_IMAGE, {params: this.getParamsGetPicture(coordinates.latitude, coordinates.longitude, date)})
             .toPromise()
             .then(response => {
-                debugger;
+                
                 this.updatePicture(this.createNasaPicture(response));
             }).catch(error => {
-               debugger;
+               
                this.updatePicture(this.createErrorNasaPicture(error));
             });
     }
