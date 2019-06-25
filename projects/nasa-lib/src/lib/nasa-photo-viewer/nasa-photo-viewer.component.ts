@@ -12,31 +12,32 @@ import { NgForm } from '@angular/forms';
 export class NasaPhotoViewer implements OnInit, OnDestroy, NasaServiceObserver {
   @Input() latitude: number|string;
   @Input() longitude: number|string;
-  @Input() begin: Date|string;
-  @Input() end: Date|string;
+  @Input() date: Date|string;
 
   @ViewChild('nasaForm') nasaForm: NgForm;
 
   nasaPicture: NasaPicture;
   subscription: Subscription[];
-  dateRange: DateRange;
+  dateRange: DateRange;zv
   maxDate: Date = new Date;
 
   constructor(private nasaService: NasaLibService, private dataPipe: DatePipe) { }
 
-  
   ngOnInit() {
     this.nasaService.subscribe(this);
 
+    this.latitude = 51.900300;
+    this.longitude = 4.548440;
+
     this.nasaForm.valueChanges.subscribe(values => {
-      if(this.nasaForm.valid && values.begin < values.end ){
+      if(this.nasaForm.valid){
         setTimeout(() => {
           this.loadPicture();
         }, 0)
       }
     })
   }
-  
+
   ngOnDestroy() {
     this.nasaService.unsubscribe(this);
   }
@@ -47,15 +48,8 @@ export class NasaPhotoViewer implements OnInit, OnDestroy, NasaServiceObserver {
 
   private loadPicture(){
     this.nasaService.updateCoordinates(this.createCoordinates());
-    this.nasaService.updateDateRange(this.createDateRange());
+    this.nasaService.updateDatePicture(this.getDate(this.date));
     this.nasaService.refreshPicture();
-  }
-
-  private createDateRange(): DateRange {
-    return {
-      begin: this.getDate(this.begin),
-      end: this.getDate(this.end)
-    } as DateRange;
   }
 
   private createCoordinates(): Coordinates{
@@ -65,7 +59,7 @@ export class NasaPhotoViewer implements OnInit, OnDestroy, NasaServiceObserver {
     } as Coordinates;
   }
 
-  // Date object of YYYY-MM-DD
+  // Date object or string formatted as YYYY-MM-DD
   private getDate(date: any): Date{
     if (date instanceof Date) {
       return date;
