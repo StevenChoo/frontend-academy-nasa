@@ -1,17 +1,17 @@
 <img *ngIf="nasaPicture" [src]="nasaPicture.url" width="400px" height="500px" />
 <span *ngIf="nasaPicture">{{nasaPicture.info}}</span>
 
-<form class="nasa-form" #nasaForm="ngForm">
+<form class="nasa-form" [formGroup]="nasaForm">
     <div class="field">
         <span>Latitude:</span>
-        <input [(ngModel)]="latitude" name="latitude" type="number" [value]="latitude" required/>
+        <input formControlName="latitude" type="number" [value]="latitude" required/>
     </div>
     <div class="field">
         <span>Longitude:</span>
-        <input [(ngModel)]="longitude" name="longitude" type="number" [value]="longitude" required/>
+        <input formControlName="longitude" type="number" [value]="longitude" required/>
     </div>
     <div class="field">
         <span>Date:</span>
-        <input [(ngModel)]="date" name="date" type="date" [max]="maxDate | date:'yyy-MM-dd'" [value]="date" required/>
+        <input formControlName="date" type="date" [max]="maxDate | date:'dd-MM-yyy'" [value]="date | date:'yyy-dd-MM'" required/>
     </div>
 </form>

@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, Input, ViewChild } from '@angular/core';
 import { NasaLibService, NasaServiceObserver, NasaPicture, DateRange, Coordinates } from '../nasa-service/nasa-lib.service';
 import { Subscription } from 'rxjs';
 import { DatePipe } from '@angular/common';
-import { NgForm } from '@angular/forms';
+import { NgForm, FormGroup, FormControl } from '@angular/forms';
 
 @Component({
   selector: 'nasa-photo-viewer',
@@ -14,48 +14,56 @@ export class NasaPhotoViewer implements OnInit, OnDestroy, NasaServiceObserver {
   @Input() longitude: number|string;
   @Input() date: Date|string;
 
-  @ViewChild('nasaForm') nasaForm: NgForm;
+  nasaForm: FormGroup;
 
   nasaPicture: NasaPicture;
-  subscription: Subscription[];
-  dateRange: DateRange;zv
+  formSubscription: Subscription;
+  dateRange: DateRange;
   maxDate: Date = new Date;
 
-  constructor(private nasaService: NasaLibService, private dataPipe: DatePipe) { }
+  constructor(private nasaService: NasaLibService, private dataPipe: DatePipe) {
+  }
 
   ngOnInit() {
+    this.nasaForm = new FormGroup({
+      'latitude': new FormControl(this.latitude || null),
+      'longitude': new FormControl(this.longitude || null),
+      'date': new FormControl(this.date || null)
+    });
+
     this.nasaService.subscribe(this);
+    
+    if (this.nasaForm.valid) {
+      this.loadPicture(this.nasaForm.value);
+    }
 
-    this.latitude = 51.900300;
-    this.longitude = 4.548440;
-
-    this.nasaForm.valueChanges.subscribe(values => {
-      if(this.nasaForm.valid){
-        setTimeout(() => {
-          this.loadPicture();
-        }, 0)
+    this.formSubscription = this.nasaForm.valueChanges.subscribe(values => {
+        if (this.nasaForm.valid) {
+          this.loadPicture(values);
+        }
       }
-    })
+    );
   }
 
   ngOnDestroy() {
     this.nasaService.unsubscribe(this);
+    this.formSubscription.unsubscribe();
   }
 
   onPictureUpdate(picture: NasaPicture) {
     this.nasaPicture = picture;
   }
 
-  private loadPicture(){
-    this.nasaService.updateCoordinates(this.createCoordinates());
-    this.nasaService.updateDatePicture(this.getDate(this.date));
+  private loadPicture(data: any){
+    this.nasaService.updateCoordinates(this.createCoordinates(data.latitude, data.longitude));
+    this.nasaService.updateDatePicture(this.getDate(data.date));
     this.nasaService.refreshPicture();
   }
 
-  private createCoordinates(): Coordinates{
+  private createCoordinates(latitude: any, longitude: any): Coordinates{
     return {
-      latitude: this.getFLoat(this.latitude),
-      longitude: this.getFLoat(this.longitude)
+      latitude: this.getFLoat(latitude),
+      longitude: this.getFLoat(longitude)
     } as Coordinates;
   }
 
