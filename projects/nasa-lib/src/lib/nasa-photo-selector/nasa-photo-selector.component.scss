@@ -1,0 +1,17 @@
+.nasa-form {
+    display: flex;
+    flex-direction: row;
+    
+    input {
+        height: 25px;
+        width: 200px;
+        border-radius: 4px;
+        border: 0;
+    }
+
+    .field {
+        display: flex;
+        flex-direction: column;
+        margin: 0 8px;
+    }
+}
